@@ -1,0 +1,9 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+pydantic>=2.0.0
+scikit-learn>=1.1.0  # Or the version your model was trained with
+joblib>=1.2.0        # Often used with scikit-learn for saving/loading models
+# Add other dependencies your model might need, e.g., nltk, spacy, specific versions of numpy/pandas
+# For a very simple text model, scikit-learn might be enough.
+# If using NLTK's VADER for sentiment (rule-based, no .pkl needed, but good alternative):
+# nltk>=3.6.0
