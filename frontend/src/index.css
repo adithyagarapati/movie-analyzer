@@ -1,0 +1,55 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Your global styles and custom component styles below */
+body {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937; /* thumb track (slate-600 slate-800) */
+  /* Base styles already applied by Tailwind, but you can override or add here */
+  @apply bg-slate-900 text-slate-100 font-sans antialiased;
+}
+
+body::-webkit-scrollbar {
+  width: 8px;
+}
+body::-webkit-scrollbar-track {
+  background: #1e293b; /* slate-800 */
+}
+body::-webkit-scrollbar-thumb {
+  background-color: #475569; /* slate-600 */
+  border-radius: 10px;
+  border: 2px solid #1e293b; /* slate-800 */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(51, 65, 85, 0.5); /* slate-700 with opacity */
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #64748b; /* slate-500 */
+  border-radius: 10px;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.custom-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem; /* Make space for the arrow */
+}
