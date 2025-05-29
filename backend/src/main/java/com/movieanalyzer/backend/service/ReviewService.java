@@ -4,16 +4,16 @@ import com.movieanalyzer.backend.dto.AnalysisResponse;
 import com.movieanalyzer.backend.dto.ReviewHistoryItem;
 import com.movieanalyzer.backend.dto.ReviewRequest;
 import com.movieanalyzer.backend.entity.MovieReview;
-import com.movieanalyzer.backend.exception.SimulatedDbUnavailableException; // Ensure this import is present
+import com.movieanalyzer.backend.exception.SimulatedDbUnavailableException;
 import com.movieanalyzer.backend.repository.MovieReviewRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException; // Ensure this import is present
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+// import org.springframework.transaction.annotation.Transactional; // REMOVE THIS
 
-import java.util.Collections; // Ensure this import is present
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,7 +31,7 @@ public class ReviewService {
         this.modelServiceClient = modelServiceClient;
     }
 
-    @Transactional
+    // REMOVED @Transactional from here
     public AnalysisResponse analyzeAndSaveReview(ReviewRequest reviewRequest) {
         logger.info("Received review for analysis: {}", reviewRequest.getMovie_name());
 
@@ -48,33 +48,32 @@ public class ReviewService {
                         modelAnalysis.getSentiment(),
                         modelAnalysis.getPseudo_rating()
                 );
+                // For this simple save, Spring Data JPA might handle transactionality implicitly
+                // or it will simply try to get a connection.
                 reviewRepository.save(movieReview);
                 logger.info("Review saved to database successfully for movie: {}", reviewRequest.getMovie_name());
-            } catch (DataAccessException e) {
+            } catch (DataAccessException e) { // This will catch errors if save() tries to get a connection and fails
                 logger.warn("DATABASE WARN: Failed to save review to DB for movie: {}. Error: {}. Analysis result will still be returned.",
                         reviewRequest.getMovie_name(), e.getMessage());
                 // Do not re-throw; allow the analysis to be returned to the user
+            } catch (Exception e) { // Catch any other unexpected error during the save attempt
+                 logger.error("UNEXPECTED ERROR during DB save attempt for movie: {}. Error: {}. Analysis result will still be returned.",
+                        reviewRequest.getMovie_name(), e.getMessage(), e);
             }
         } else {
             logger.warn("DATABASE INFO: Database interaction is disabled by API toggle. Skipping save for movie: {}", reviewRequest.getMovie_name());
-            // This also means the analysis result will be returned without saving.
         }
 
         return modelAnalysis; // Return the analysis from the model service
     }
 
     public List<ReviewHistoryItem> getReviewHistory(String movieName) {
+        // ... (this method remains the same as the last correct version) ...
         logger.info("Fetching review history for movie: {}", movieName);
-
-        // Check the debug toggle first
         if (!AppBehaviorState.isDatabaseInteractionEnabled()) {
             logger.warn("DATABASE INFO: Database interaction is disabled by API toggle. Throwing error for /reviews_history/{}", movieName);
-            // This will make the endpoint return an error (handled by GlobalExceptionHandler),
-            // and helps demonstrate the readiness probe failing if it relies on this state.
             throw new SimulatedDbUnavailableException("Database interaction is disabled via API for fetching history.");
         }
-
-        // If debug toggle allows DB interaction, proceed to try and fetch from DB
         try {
             List<MovieReview> reviews = reviewRepository.findTop10ByMovieNameOrderByCreatedAtDesc(movieName);
             return reviews.stream()
@@ -86,21 +85,16 @@ public class ReviewService {
                             review.getCreatedAt()))
                     .collect(Collectors.toList());
         } catch (DataAccessException e) {
-            // This catches actual DB connection failures if the debug toggle was true
-            // but the database is genuinely down.
             logger.error("DATABASE ERROR: Failed to fetch review history from DB for movie: {}. Error: {}", movieName, e.getMessage());
-            // Gracefully return empty list to the user in case of actual DB error,
-            // but the readiness probe (checking dataSource.getConnection()) would have already caught this.
             return Collections.emptyList();
         }
     }
 
-    // Method for CPU intensive task
     public double performCpuIntensiveTask(int iterations) {
+        // ... (this method remains the same) ...
         logger.info("Performing CPU intensive task with iterations: {}", iterations);
         double result = 0;
         for (int i = 0; i < iterations; i++) {
-            // A slightly more complex calculation to ensure CPU usage
             result += Math.log(Math.abs(Math.sin(i) * Math.cos(i / (Math.PI / 2)) + Math.exp(Math.sin(i/(double)(iterations > 0 ? iterations : 1 ))) ) +1) * Math.sqrt(i + 1.0);
             if ( (i > 0 && iterations > 10 && i % (iterations / 10) == 0) || (iterations <=10 && i > 0) ) {
                  logger.debug("CPU task progress: {}% complete", String.format("%.0f", (double)i*100/iterations) );

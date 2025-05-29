@@ -8,7 +8,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // This URL is for this Node.js server to talk to the backend container.
 // It uses the Docker internal DNS name.
-const INTERNAL_BACKEND_API_TARGET = process.env.INTERNAL_BACKEND_API_URL || 'http://localhost:8081/error-target-not-set'; // Fallback to a non-existent local port for safety
+const INTERNAL_BACKEND_API_TARGET = process.env.BACKEND_API_URL || 'http://localhost:8081/error-target-not-set'; // Fallback to a non-existent local port for safety
 
 // The React app will make calls to /api/* which will be proxied
 const PROXY_PATH_PREFIX = '/api'; // All backend calls from React will start with this
