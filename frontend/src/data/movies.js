@@ -1,47 +1,61 @@
 // Fixed list of 6 movies as specified in rules
-// Includes thumbnail paths for user-provided images
+// Now uses configurable image URLs (local or S3)
 // Updated IDs to match database values for preloaded reviews
+
+import { getMovieImageUrl } from '../config/imageConfig';
 
 export const MOVIES = [
   {
     id: 'shawshank',
     title: 'The Shawshank Redemption',
-    thumbnail: '/images/movies/shawshank-redemption.jpg',
+    get thumbnail() {
+      return getMovieImageUrl('shawshank');
+    },
     year: 1994,
     genre: 'Drama'
   },
   {
     id: 'inception',
     title: 'Inception',
-    thumbnail: '/images/movies/inception.jpg',
+    get thumbnail() {
+      return getMovieImageUrl('inception');
+    },
     year: 2010,
     genre: 'Sci-Fi'
   },
   {
     id: 'interstellar',
     title: 'Interstellar',
-    thumbnail: '/images/movies/interstellar.jpg',
+    get thumbnail() {
+      return getMovieImageUrl('interstellar');
+    },
     year: 2014,
     genre: 'Sci-Fi'
   },
   {
     id: 'fight-club',
     title: 'Fight Club',
-    thumbnail: '/images/movies/fight-club.jpg',
+    get thumbnail() {
+      return getMovieImageUrl('fight-club');
+    },
     year: 1999,
     genre: 'Drama'
   },
   {
     id: 'gladiator',
     title: 'Gladiator',
-    thumbnail: '/images/movies/gladiator.jpg',
+    get thumbnail() {
+      return getMovieImageUrl('gladiator');
+    },
     year: 2000,
     genre: 'Action'
   },
   {
     id: 'dark-knight',
     title: 'Dark Knight',
-    thumbnail: '/images/movies/dark-knight.jpg',
+    get thumbnail() {
+      return getMovieImageUrl('dark-knight');
+    },
     year: 2008,
     genre: 'Action'
   }
