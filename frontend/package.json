@@ -4,11 +4,12 @@
   "description": "Movie Review App Frontend - Educational Demo for DevOps/Kubernetes",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
     "build": "react-scripts build",
+    "start": "npm run build && node server.js",
     "dev": "react-scripts start",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "server": "node server.js"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -29,5 +30,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 } 
