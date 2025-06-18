@@ -1,5 +1,5 @@
 ---
-# Backend Deployment
+# Backend Deployment - Lambda Integration
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,6 +17,9 @@ spec:
       labels:
         app: {{ .Values.backend.name }}
     spec:
+      {{- if and .Values.backend.serviceAccount.create (eq .Values.backend.env.LAMBDA_AUTH_METHOD "iam") }}
+      serviceAccountName: {{ .Values.backend.serviceAccount.name }}
+      {{- end }}
       containers:
       - name: {{ .Values.backend.name }}
         image: {{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
@@ -24,6 +27,7 @@ spec:
         ports:
         - containerPort: {{ .Values.backend.service.targetPort }}
         env:
+        # Database Configuration
         - name: DB_HOST
           value: {{ .Values.backend.env.DB_HOST | quote }}
         - name: DB_PORT
@@ -40,8 +44,33 @@ spec:
             secretKeyRef:
               name: {{ .Values.backend.name }}-secret
               key: DB_PASSWORD
-        - name: MODEL_SERVER_URL
-          value: {{ .Values.backend.env.MODEL_SERVER_URL | quote }}
+        
+        # Lambda Configuration
+        - name: MODEL_SERVER_MODE
+          value: {{ .Values.backend.env.MODEL_SERVER_MODE | quote }}
+        - name: LAMBDA_FUNCTION_NAME
+          value: {{ .Values.backend.env.LAMBDA_FUNCTION_NAME | quote }}
+        - name: AWS_REGION
+          value: {{ .Values.backend.env.AWS_REGION | quote }}
+        - name: LAMBDA_AUTH_METHOD
+          value: {{ .Values.backend.env.LAMBDA_AUTH_METHOD | quote }}
+        
+        # AWS Credentials (only if not using IRSA)
+        {{- if .Values.backend.secret.AWS_ACCESS_KEY_ID }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.backend.name }}-secret
+              key: AWS_ACCESS_KEY_ID
+        {{- end }}
+        {{- if .Values.backend.secret.AWS_SECRET_ACCESS_KEY }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.backend.name }}-secret
+              key: AWS_SECRET_ACCESS_KEY
+        {{- end }}
+        
         - name: SERVER_PORT
           value: {{ .Values.backend.env.SERVER_PORT | quote }}
         resources:

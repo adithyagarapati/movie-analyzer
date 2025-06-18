@@ -1,11 +1,12 @@
 # Default values for movie-analyzer
 # This values.yaml file contains simplified parameterized configurations
-# Database: Uses external AWS RDS PostgreSQL (not containerized)
+# Database: Uses external AWS RDS PostgreSQL
+# Sentiment Analysis: Uses AWS Lambda (serverless)
 
 global:
   namespace: movie-analyzer
 
-# Backend configuration
+# Backend configuration - Lambda Integration
 backend:
   name: backend
   replicaCount: 1
@@ -30,12 +31,26 @@ backend:
   
   env:
     # Database connection - Configure these to point to your AWS RDS instance
-    # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.us-east-1.rds.amazonaws.com)
+    # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.region.rds.amazonaws.com)
     DB_HOST: "your-rds-endpoint.region.rds.amazonaws.com"
     DB_PORT: "5432"
     DB_NAME: "moviereviews"
-    MODEL_SERVER_URL: "http://model:5000"
     SERVER_PORT: "8080"
+    
+    # Lambda Configuration for Sentiment Analysis
+    MODEL_SERVER_MODE: "lambda"
+    LAMBDA_FUNCTION_NAME: "movie-analyzer-sentiment"
+    AWS_REGION: "ap-south-1"
+    LAMBDA_AUTH_METHOD: "iam"  # Options: iam (IAM roles), keys (access keys)
+  
+  # Service Account for IAM Roles for Service Accounts (IRSA)
+  # Only created when using IAM authentication method
+  serviceAccount:
+    create: true  # Set to false if using keys authentication
+    name: backend-sa
+    annotations:
+      # Replace with your actual IAM role ARN when using IAM method
+      eks.amazonaws.com/role-arn: "REPLACE_WITH_IAM_ROLE_ARN"
   
   probes:
     readiness:
@@ -54,6 +69,11 @@ backend:
     # Update these with your actual RDS username and password
     DB_USERNAME: bW92aWV1c2Vy  # movieuser (base64)
     DB_PASSWORD: bW92aWVwYXNz  # moviepass (base64)
+    
+    # AWS Credentials (only if not using IRSA)
+    # Uncomment and configure if not using IAM roles
+    # AWS_ACCESS_KEY_ID: ""
+    # AWS_SECRET_ACCESS_KEY: ""
 
 # Frontend configuration
 frontend:
@@ -91,44 +111,6 @@ frontend:
     liveness:
       path: /health
       port: 3000
-      initialDelaySeconds: 10
-      periodSeconds: 10
-
-# Model server configuration
-model:
-  name: model
-  replicaCount: 1
-  
-  image:
-    repository: artisantek/movie-analyzer
-    tag: model
-    pullPolicy: IfNotPresent
-  
-  service:
-    type: ClusterIP
-    port: 5000
-    targetPort: 5000
-  
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "250m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
-  
-  env:
-    MODEL_PORT: "5000"
-  
-  probes:
-    readiness:
-      path: /health
-      port: 5000
-      initialDelaySeconds: 5
-      periodSeconds: 5
-    liveness:
-      path: /health
-      port: 5000
       initialDelaySeconds: 10
       periodSeconds: 10
 

@@ -1,6 +1,7 @@
 ---
-# Backend Deployment
-# Database: Uses external AWS RDS PostgreSQL (not containerized)
+# Backend Deployment - Lambda Integration
+# Database: Uses external AWS RDS PostgreSQL
+# Sentiment Analysis: Uses AWS Lambda (serverless)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,6 +19,8 @@ spec:
       labels:
         app: backend
     spec:
+      # Service account for IAM role (IRSA)
+      serviceAccountName: backend-sa
       containers:
       - name: backend
         image: artisantek/movie-analyzer:backend
@@ -42,8 +45,29 @@ spec:
             secretKeyRef:
               name: backend-secret
               key: DB_PASSWORD
-        - name: MODEL_SERVER_URL
-          value: "http://model:5000"
+        
+        # Lambda Configuration for Sentiment Analysis
+        - name: MODEL_SERVER_MODE
+          value: "lambda"
+        - name: LAMBDA_FUNCTION_NAME
+          value: "movie-analyzer-sentiment"
+        - name: AWS_REGION
+          value: "ap-south-1"
+        - name: LAMBDA_AUTH_METHOD
+          value: "iam"
+        
+        # AWS Credentials (only if not using IRSA)
+        # - name: AWS_ACCESS_KEY_ID
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: aws-credentials
+        #       key: AWS_ACCESS_KEY_ID
+        # - name: AWS_SECRET_ACCESS_KEY
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: aws-credentials
+        #       key: AWS_SECRET_ACCESS_KEY
+        
         - name: SERVER_PORT
           value: "8080"
         resources:

@@ -1,32 +1,32 @@
 services:
-  # Model Server (Python Flask)
-  model:
-    build: ./model
-    image: movie-review-model:latest
-    container_name: model
-    networks:
-      - movie
-
-  # Backend (Java Spring Boot) - Updated to Java 21, Spring Boot 3.5
-  # Database connection now points to external AWS RDS PostgreSQL
+  # Backend (Java Spring Boot) - Lambda Integration
+  # Uses AWS Lambda for sentiment analysis instead of containerized model
   backend:
     build: ./backend
     image: movie-review-backend:latest
     container_name: backend
     environment:
       # Database connection - Configure these to point to your AWS RDS instance
-      # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.us-east-1.rds.amazonaws.com)
+      # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.region.rds.amazonaws.com)
       DB_HOST: ${DB_HOST:-your-rds-endpoint.region.rds.amazonaws.com}
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-moviereviews}
       DB_USERNAME: ${DB_USERNAME:-movieuser}
       DB_PASSWORD: ${DB_PASSWORD:-moviepass}
-      MODEL_SERVER_URL: http://model:5000
+      
+      # Lambda Configuration for Sentiment Analysis
+      MODEL_SERVER_MODE: lambda
+      LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME:-movie-analyzer-sentiment}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      LAMBDA_AUTH_METHOD: ${LAMBDA_AUTH_METHOD:-keys}  # Options: iam, keys
+      
+      # AWS Credentials (only needed for 'keys' authentication method)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      
       SERVER_PORT: 8080
     networks:
       - movie
-    depends_on:
-      - model
 
   # Frontend (React + Express) - Updated to Node 24, React 19.1
   frontend:

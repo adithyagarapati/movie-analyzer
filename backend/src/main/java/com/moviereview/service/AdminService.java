@@ -209,14 +209,17 @@ public class AdminService {
     }
 
     /**
-     * Get backend status for admin panel
+     * Get comprehensive admin status including Lambda configuration
      */
     public Map<String, Object> getAdminStatus() {
+        Map<String, Object> modelConfig = modelServerService.getServerConfig();
+        
         return Map.of(
             "backendHealthy", backendHealthy,
             "backendOverloaded", backendOverloaded,
             "databaseConnected", reviewService.isDatabaseConnectionEnabled(),
             "modelServerConnected", modelServerService.isModelConnectionEnabled(),
+            "modelServerConfig", modelConfig,
             "actualDatabaseStatus", reviewService.isDatabaseAvailable(),
             "actualModelServerStatus", modelServerService.isModelServerAvailable(),
             "timestamp", java.time.Instant.now().toString(),

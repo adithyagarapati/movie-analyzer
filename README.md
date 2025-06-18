@@ -1,30 +1,30 @@
-# Movie Analyzer
+# Movie Analyzer - Lambda Integration
 
-A comprehensive full-stack movie review application with sentiment analysis capabilities, designed for demonstrating modern DevOps practices, microservices architecture, and Kubernetes/Docker deployment strategies using **AWS RDS PostgreSQL**.
+A comprehensive full-stack movie review application with serverless sentiment analysis capabilities, designed for demonstrating modern DevOps practices, cloud-native architecture, and AWS Lambda integration using **AWS RDS PostgreSQL**.
 
 ## 🎬 Overview
 
-Movie Analyzer is a multi-service application that allows users to browse movies, submit reviews, and automatically analyze sentiment using machine learning. The application showcases modern web development practices with Spring Boot, React, Python Flask, and **AWS RDS PostgreSQL**, designed for cloud-native deployment on Kubernetes/Docker.
+Movie Analyzer is a cloud-native application that allows users to browse movies, submit reviews, and automatically analyze sentiment using **AWS Lambda**. The application showcases modern web development practices with Spring Boot, React, and **AWS serverless services**, designed for cloud-native deployment on Kubernetes/Docker.
 
 ### Key Features
 
 - **Movie Reviews**: Browse and submit reviews for 6 popular movies
-- **Sentiment Analysis**: Automatic sentiment scoring and rating generation using TextBlob
+- **Serverless Sentiment Analysis**: Automatic sentiment scoring using AWS Lambda with TextBlob
 - **Admin Controls**: Toggle service health, simulate failures, monitor system status
-- **Microservices Architecture**: Separate services for frontend, backend, ML model with external database
-- **Cloud-Native Database**: Uses AWS RDS PostgreSQL for production-ready database management
+- **Cloud-Native Architecture**: Frontend and backend services with AWS Lambda and RDS
+- **AWS RDS PostgreSQL**: Production-ready managed database service
 - **Health Monitoring**: Comprehensive health checks and status monitoring
 - **Modern UI**: Responsive React interface with real-time status updates
 
 ## 🏗️ Architecture
 
-The application consists of three containerized services connected to an external AWS RDS PostgreSQL database:
+The application consists of two containerized services integrated with AWS Lambda and RDS:
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Frontend  │───▶│   Backend   │───▶│    Model    │
-│  (React)    │    │(Spring Boot)│    │  (Flask)    │
-│  Port: 3000 │    │ Port: 8080  │    │ Port: 5000  │
+│   Frontend  │───▶│   Backend   │───▶│ AWS Lambda  │
+│  (React)    │    │(Spring Boot)│    │(Sentiment)  │
+│  Port: 3000 │    │ Port: 8080  │    │ Serverless  │
 └─────────────┘    └─────────────┘    └─────────────┘
                             │
                             ▼
@@ -53,10 +53,11 @@ The application consists of three containerized services connected to an externa
 - **Features**:
   - RESTful API for review management
   - AWS RDS PostgreSQL integration with JPA/Hibernate
-  - Model server communication for sentiment analysis
+  - AWS Lambda integration for sentiment analysis
   - Admin controls for health simulation
   - Rate limiting and error handling
   - Spring Actuator for monitoring
+  - Multiple AWS authentication methods (IRSA, credentials, profiles)
 - **Main Endpoints**:
   - `GET /api/reviews/{movieId}` - Get reviews for a movie
   - `POST /api/reviews` - Submit a new review
@@ -65,18 +66,25 @@ The application consists of three containerized services connected to an externa
   - `GET /api/admin/status` - Admin status dashboard
 - **Health Endpoint**: `/actuator/health`
 
-#### 🤖 Model Server (Python Flask)
-- **Technology**: Python 3.12, Flask, TextBlob, NLTK
+#### 🔗 AWS Lambda Function
+- **Technology**: Python 3.12, TextBlob, NLTK
 - **Features**:
-  - Sentiment analysis using TextBlob
+  - Serverless sentiment analysis using TextBlob
   - Automatic rating generation (1-5 stars) based on sentiment
-  - Admin health toggle for testing
+  - Pay-per-request pricing model
+  - Auto-scaling based on demand
   - Confidence scoring (high/medium/low)
-- **Endpoints**:
-  - `POST /analyze` - Analyze sentiment of review text
-  - `GET /health` - Health check
-  - `POST /admin/toggle-health` - Toggle service health
+- **Function**: `movie-analyzer-sentiment`
+- **Actions**: `analyze`, `health`, `status`
 - **Sentiment Categories**: Positive (4-5 stars), Neutral (2.5-3.5 stars), Negative (1-2 stars)
+
+#### 🔐 Lambda Authentication
+
+**2 Simple Methods:**
+- **`iam`** - Production (IAM roles, IRSA) ⭐⭐⭐⭐⭐
+- **`keys`** - Development (Access keys) ⭐⭐⭐
+
+**📋 Complete Setup Guide:** [`LAMBDA_GUIDE.md`](./docs/LAMBDA_GUIDE.md)
 
 #### 🗄️ Database (AWS RDS PostgreSQL)
 - **Technology**: AWS RDS PostgreSQL 15.x
@@ -104,7 +112,7 @@ The application consists of three containerized services connected to an externa
 
 **⚠️ Important**: Before deploying the application, you must set up an AWS RDS PostgreSQL instance.
 
-📋 **Follow the detailed guide**: [`RDS_SETUP.md`](./RDS_SETUP.md)
+📋 **Follow the detailed guide**: [`RDS_SETUP.md`](./docs/RDS_SETUP.md)
 
 This guide covers:
 - Creating AWS RDS PostgreSQL instance
@@ -114,23 +122,33 @@ This guide covers:
 
 ### Local Development with Docker Compose
 
-After setting up your RDS database:
+After setting up your RDS database and deploying the Lambda function:
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd movie-analyzer
 
-# Create .env file with your RDS connection details
+# Create .env file with your RDS and Lambda configuration
 cat > .env << EOF
+# Database Configuration
 DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
 DB_PORT=5432
 DB_NAME=moviereviews
 DB_USERNAME=movieuser
 DB_PASSWORD=moviepass
+
+# Lambda Configuration
+LAMBDA_FUNCTION_NAME=movie-analyzer-sentiment
+AWS_REGION=ap-south-1
+LAMBDA_AUTH_METHOD=keys
+
+# AWS Credentials (only needed for 'keys' method)
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
 EOF
 
-# Start services (database is external RDS)
+# Start services (sentiment analysis via Lambda)
 docker-compose up -d --build
 
 # View logs
@@ -145,21 +163,17 @@ docker-compose down
 
 ### Docker Compose Configuration
 
-The `docker-compose.yml` provides three services connected to external RDS:
+The `docker-compose.yml` provides two services integrated with AWS services:
 
 ```yaml
 services:
-  model:       # Python Flask sentiment analysis
-  backend:     # Java Spring Boot API (connects to RDS)
+  backend:     # Java Spring Boot API (connects to RDS + Lambda)
   frontend:    # React + Express web app
 ```
 
-**Environment Variables for RDS:**
-- `DB_HOST`: Your RDS endpoint
-- `DB_PORT=5432`, `DB_NAME=moviereviews`
-- `DB_USERNAME=movieuser`, `DB_PASSWORD=moviepass`
-- `MODEL_SERVER_URL=http://model:5000`
-- `BACKEND_API_URL=http://backend:8080`
+**Environment Variables:**
+- **Database (RDS)**: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`
+- **Lambda**: `LAMBDA_FUNCTION_NAME`, `AWS_REGION`, `LAMBDA_AUTH_METHOD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 
 ## ☸️ Kubernetes Deployment
 
@@ -197,18 +211,13 @@ deploy/manifests/
 ├── namespace.yaml              # movie-analyzer namespace
 ├── backend/
 │   ├── deployment.yaml         # 1 replica, 512Mi/500m requests (configured for RDS)
-│   ├── service.yaml           # ClusterIP service
-│   └── secret.yaml            # RDS database credentials
-├── frontend/
-│   ├── deployment.yaml         # 1 replica, 256Mi/250m requests  
-│   ├── service.yaml           # NodePort 30000
-│   └── ingress.yaml           # Optional ingress
-├── model/
-│   ├── deployment.yaml         # 1 replica, 256Mi/250m requests
-│   └── service.yaml           # ClusterIP service
-├── deploy.sh                  # Deployment automation
-├── kustomization.yaml         # Kustomize configuration
-└── README.md                  # Deployment documentation
+│   │   └── secret.yaml        # RDS database credentials
+│   ├── frontend/
+│   │   ├── deployment.yaml     # 1 replica, 256Mi/250m requests  
+│   │   └── ingress.yaml        # Optional ingress
+│   ├── deploy.sh               # Deployment automation
+│   ├── kustomization.yaml      # Kustomize configuration
+│   └── README.md               # Deployment documentation
 ```
 
 ### Option 2: Kustomize Deployment
@@ -295,14 +304,12 @@ deploy/helm/
 │   ├── backend/
 │   │   ├── deployment.yaml    # Parameterized backend deployment (RDS)
 │   │   ├── service.yaml       # Backend service template
+│   │   ├── serviceaccount.yaml # Service account for IRSA
 │   │   └── secret.yaml        # RDS credentials template
 │   ├── frontend/
 │   │   ├── deployment.yaml    # Frontend deployment template
 │   │   ├── service.yaml       # Frontend service template
 │   │   └── ingress.yaml       # Optional ingress template
-│   ├── model/
-│   │   ├── deployment.yaml    # Model service template
-│   │   └── service.yaml       # Model service template
 │   └── namespace.yaml         # Namespace template
 └── README.md                  # Helm-specific documentation
 ```
@@ -315,9 +322,8 @@ The application includes comprehensive admin controls for testing resilience:
 
 #### Health Toggle Endpoints
 - **Backend Health**: `POST /api/admin/toggle-health`
-- **Model Health**: `POST /admin/toggle-health` (model service)
+- **Lambda Health**: `POST /api/admin/toggle-model` (Lambda connection simulation)
 - **Database Simulation**: `POST /api/admin/toggle-database`
-- **Model Connection Simulation**: `POST /api/admin/toggle-model`
 
 #### Admin Panel Features
 Access via the floating admin panel in the frontend:
@@ -330,14 +336,14 @@ Access via the floating admin panel in the frontend:
 #### Monitoring Endpoints
 - **Backend Status**: `GET /api/admin/status`
 - **Backend Health**: `GET /api/admin/health`
-- **Model Status**: `GET /admin/status`
+- **Lambda Status**: Included in backend status
 - **System Info**: `GET /api/admin/info`
 
 ### Testing Scenarios
 
 1. **Backend Failure**: Toggle backend health to test frontend error handling
 2. **Database Connectivity**: Simulate RDS connection issues
-3. **Model Server Failure**: Test sentiment analysis service failures
+3. **Lambda Function Failure**: Test sentiment analysis service failures
 4. **Overload Simulation**: Test backend overload scenarios
 
 ## 📊 API Documentation
@@ -396,28 +402,6 @@ POST /api/admin/toggle-model
 ```
 **Response**: Updated service status
 
-### Model Service Endpoints
-
-#### Sentiment Analysis
-```http
-POST /analyze
-Content-Type: application/json
-
-{
-  "text": "This movie was absolutely fantastic!"
-}
-```
-**Response**:
-```json
-{
-  "sentiment": "positive",
-  "score": 0.95,
-  "confidence": "high",
-  "rating": 4.8,
-  "timestamp": 1640995200.0
-}
-```
-
 ## 🛠️ Development
 
 ### Building Images
@@ -428,57 +412,26 @@ docker-compose build
 
 # Build individual services
 docker build -t movie-backend ./backend
-docker build -t movie-frontend ./frontend  
-docker build -t movie-model ./model
+docker build -t movie-frontend ./frontend
 ```
 
 ### Environment Variables
 
-#### Backend (RDS Configuration)
+#### Backend (Lambda + RDS Configuration)
 - `DB_HOST`: RDS endpoint (required - update with your actual endpoint)
 - `DB_PORT`: Database port (default: 5432)
 - `DB_NAME`: Database name (default: moviereviews)
 - `DB_USERNAME`: Database user (default: movieuser)
 - `DB_PASSWORD`: Database password (default: moviepass)
-- `MODEL_SERVER_URL`: Model service URL (default: http://model:5000)
+- `LAMBDA_FUNCTION_NAME`: Lambda function name (default: movie-analyzer-sentiment)
+- `AWS_REGION`: AWS region (default: ap-south-1)
+- `LAMBDA_AUTH_METHOD`: Authentication method (iam or keys)
+- `AWS_ACCESS_KEY_ID`: AWS access key (only for keys method)
+- `AWS_SECRET_ACCESS_KEY`: AWS secret key (only for keys method)
 - `SERVER_PORT`: Backend port (default: 8080)
 
 #### Frontend
 - `BACKEND_API_URL`: Backend API URL (default: http://backend:8080)
-
-#### Model
-- `MODEL_PORT`: Model service port (default: 5000)
-
-### Database Schema
-
-The AWS RDS PostgreSQL database uses this schema:
-
-```sql
-CREATE TABLE reviews (
-    id BIGSERIAL PRIMARY KEY,
-    movie_id VARCHAR(255) NOT NULL,
-    review_text VARCHAR(2000) NOT NULL,
-    sentiment VARCHAR(50),
-    sentiment_score DOUBLE PRECISION,
-    rating DOUBLE PRECISION,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Indexes for performance
-CREATE INDEX idx_reviews_movie_id ON reviews(movie_id);
-CREATE INDEX idx_reviews_created_at ON reviews(created_at);
-CREATE INDEX idx_reviews_sentiment ON reviews(sentiment);
-```
-
-### Sample Data
-
-The database initialization script (`database/init.sql`) includes sample reviews for all 6 movies:
-- **The Shawshank Redemption** (shawshank)
-- **Inception** (inception)  
-- **Interstellar** (interstellar)
-- **Fight Club** (fight-club)
-- **Gladiator** (gladiator)
-- **The Dark Knight** (dark-knight)
 
 ## 🚦 Monitoring & Health Checks
 
@@ -487,12 +440,10 @@ The database initialization script (`database/init.sql`) includes sample reviews
 #### Readiness Probes
 - **Backend**: `/actuator/health` (10s interval)
 - **Frontend**: `/health` (5s interval)
-- **Model**: `/health` (5s interval)
 
 #### Liveness Probes
 - **Backend**: `/actuator/health` (10s interval)
-- **Frontend**: `/health` (10s interval)  
-- **Model**: `/health` (10s interval)
+- **Frontend**: `/health` (10s interval)
 
 ### Resource Limits
 
@@ -504,23 +455,19 @@ The database initialization script (`database/init.sql`) includes sample reviews
 - **Requests**: 256Mi memory, 250m CPU
 - **Limits**: 512Mi memory, 500m CPU
 
-#### Model
-- **Requests**: 256Mi memory, 250m CPU
-- **Limits**: 512Mi memory, 500m CPU
-
 ## 📁 Project Structure
 
 ```
 movie-analyzer/
-├── backend/                   # Spring Boot backend service
+├── backend/                   # Spring Boot backend service (Lambda integration)
 │   ├── src/main/java/com/moviereview/
 │   │   ├── controller/        # REST controllers
-│   │   ├── service/          # Business logic
+│   │   ├── service/          # Business logic + Lambda service
 │   │   ├── repository/       # Data access layer
 │   │   ├── entity/           # JPA entities
 │   │   └── config/           # Configuration classes
 │   ├── Dockerfile
-│   └── pom.xml               # Maven dependencies
+│   └── pom.xml               # Maven dependencies (AWS SDK included)
 ├── frontend/                  # React frontend service
 │   ├── src/
 │   │   ├── components/       # React components
@@ -531,28 +478,30 @@ movie-analyzer/
 │   ├── server.js            # Express server
 │   ├── Dockerfile
 │   └── package.json         # Node.js dependencies
-├── model/                     # Python Flask model service
-│   ├── app.py               # Flask application
-│   ├── requirements.txt     # Python dependencies
-│   ├── Dockerfile
+├── lambda/                    # AWS Lambda function for sentiment analysis
+│   ├── lambda_function.py    # Lambda handler
+│   ├── requirements.txt      # Python dependencies
+│   ├── deploy.sh            # Lambda deployment script
 │   └── README.md
+├── docs/                      # Organized documentation
+│   ├── README.md            # Documentation index
+│   ├── LAMBDA_GUIDE.md      # Complete Lambda integration guide
+│   └── RDS_SETUP.md         # Database setup guide
 ├── database/                  # Database initialization
 │   └── init.sql             # Database schema and sample data (for RDS setup)
 ├── deploy/                    # Deployment configurations
-│   ├── manifests/           # Kubernetes manifests (RDS configured)
+│   ├── manifests/           # Kubernetes manifests (Lambda configured)
 │   │   ├── backend/
 │   │   ├── frontend/
-│   │   ├── model/
 │   │   ├── deploy.sh        # Deployment script
 │   │   ├── kustomization.yaml
 │   │   └── README.md
-│   └── helm/                # Helm chart (RDS configured)
+│   └── helm/                # Helm chart (Lambda configured)
 │       ├── templates/
 │       ├── Chart.yaml
 │       ├── values.yaml
 │       └── README.md
-├── RDS_SETUP.md              # AWS RDS PostgreSQL setup guide
-├── docker-compose.yml        # Local development setup (RDS configured)
+├── docker-compose.yml        # Local development setup (Lambda configured)
 ├── .gitignore
 └── README.md                 # This file
 ```
@@ -589,6 +538,17 @@ kubectl get pods -n movie-analyzer
 psql -h YOUR_RDS_ENDPOINT -U movieuser -d moviereviews -c "SELECT COUNT(*) FROM reviews;"
 ```
 
+## 📚 Documentation
+
+### 📋 Complete Guides
+- **[📁 Documentation Hub](./docs/)** - All comprehensive guides
+- **[🚀 Lambda Integration](./docs/LAMBDA_GUIDE.md)** - AWS Lambda setup and configuration
+- **[🗄️ Database Setup](./docs/RDS_SETUP.md)** - AWS RDS PostgreSQL configuration
+
+### 🚀 Deployment Guides  
+- **[☸️ Kubernetes Manifests](./deploy/manifests/README.md)** - Raw Kubernetes deployment
+- **[⚒️ Helm Charts](./deploy/helm/README.md)** - Helm-based deployment
+
 ---
 
-**Movie Analyzer** - Demonstrating modern cloud-native DevOps practices with microservices, containers, Kubernetes orchestration, and AWS RDS PostgreSQL. 
+**Movie Analyzer** - Demonstrating modern cloud-native DevOps practices with serverless Lambda integration and AWS RDS PostgreSQL. 

@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Movie Analyzer Kubernetes Deployment Script
-# This script deploys the movie analyzer application using organized manifests
-# Database: Uses external AWS RDS PostgreSQL (not containerized)
+# Movie Analyzer Kubernetes Deployment Script - Lambda Integration
+# This script deploys the movie analyzer application using Lambda for sentiment analysis
+# Database: Uses external AWS RDS PostgreSQL
+# Sentiment Analysis: Uses AWS Lambda (serverless)
 
 set -e
 
@@ -61,7 +62,7 @@ apply_manifests() {
 # Function to delete all resources
 cleanup() {
     print_warning "This will delete the entire Movie Analyzer deployment!"
-    print_warning "Note: This does NOT affect your AWS RDS database"
+    print_warning "Note: This does NOT affect your AWS RDS database or Lambda function"
     read -p "Are you sure you want to continue? (y/N): " -n 1 -r
     echo
     
@@ -69,7 +70,7 @@ cleanup() {
         print_status "Cleaning up Movie Analyzer deployment..."
         kubectl delete namespace "$NAMESPACE" --ignore-not-found=true
         print_success "Cleanup completed successfully!"
-        print_status "Your AWS RDS database remains unaffected"
+        print_status "Your AWS RDS database and Lambda function remain unaffected"
     else
         print_status "Cleanup cancelled."
     fi
@@ -101,15 +102,27 @@ status() {
     fi
     
     echo
-    print_status "Database Connection:"
-    print_warning "Using external AWS RDS PostgreSQL - ensure your RDS instance is configured and accessible"
+    print_status "Backend Configuration:"
+    print_warning "Using AWS Lambda for sentiment analysis - ensure Lambda function is deployed"
+    print_warning "Using external AWS RDS PostgreSQL - ensure RDS instance is configured"
+    
+    echo
+    print_status "Lambda Integration Status:"
+    kubectl get serviceaccount backend-sa -n "$NAMESPACE" 2>/dev/null && print_success "Service account configured" || print_warning "Service account not found"
+    
+    # Check for backend pod logs for Lambda connectivity
+    BACKEND_POD=$(kubectl get pods -n "$NAMESPACE" -l app=backend -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    if [ ! -z "$BACKEND_POD" ]; then
+        print_status "Checking Lambda authentication in backend logs..."
+        kubectl logs "$BACKEND_POD" -n "$NAMESPACE" | grep -E "(Lambda|AWS|🔐|✅|❌)" | tail -5 || print_warning "No Lambda logs found"
+    fi
 }
 
 # Function to get logs
 logs() {
     local service=$1
     if [ -z "$service" ]; then
-        print_error "Please specify a service: backend, frontend, or model"
+        print_error "Please specify a service: backend or frontend"
         exit 1
     fi
     
@@ -119,28 +132,33 @@ logs() {
 
 # Main deployment function
 deploy() {
-    print_status "Starting Movie Analyzer deployment..."
-    print_warning "Make sure your AWS RDS PostgreSQL database is configured and accessible!"
+    print_status "Starting Movie Analyzer deployment with Lambda integration..."
+    print_warning "Prerequisites:"
+    print_warning "  1. AWS RDS PostgreSQL database configured and accessible"
+    print_warning "  2. AWS Lambda function 'movie-analyzer-sentiment' deployed"
+    print_warning "  3. IAM role for service account configured (or AWS credentials provided)"
     echo
     
     # Apply in order: namespace first, then dependencies, then applications
     print_status "Creating namespace..."
     kubectl apply -f "$MANIFEST_DIR/namespace.yaml"
     
-    # Apply backend secrets and services
+    # Apply backend with Lambda configuration
     apply_manifests "backend"
     
-    # Apply application services
-    apply_manifests "model"
+    # Apply frontend
     apply_manifests "frontend"
     
     # Wait for all deployments to be ready
-    print_status "Waiting for all deployments to be ready..."
+    print_status "Waiting for deployments to be ready..."
     kubectl wait --for=condition=available deployment --all -n "$NAMESPACE" --timeout=300s
     
     echo
-    print_success "Movie Analyzer deployed successfully!"
-    print_warning "Remember to configure backend environment variables to point to your RDS endpoint"
+    print_success "Movie Analyzer deployed successfully with Lambda integration!"
+    print_warning "Make sure to configure:"
+    print_warning "  - RDS endpoint in backend deployment"
+    print_warning "  - IAM role ARN in service account annotations"
+    print_warning "  - Lambda function name and region"
     echo
     status
 }
@@ -163,12 +181,15 @@ case "$1" in
         echo "Usage: $0 {deploy|cleanup|status|logs <service>}"
         echo
         echo "Commands:"
-        echo "  deploy    - Deploy the movie analyzer application"
+        echo "  deploy    - Deploy the movie analyzer application with Lambda"
         echo "  cleanup   - Remove the entire deployment"
         echo "  status    - Show deployment status"
-        echo "  logs      - Show logs for a specific service (backend|frontend|model)"
+        echo "  logs      - Show logs for a specific service (backend|frontend)"
         echo
-        echo "Note: This deployment uses external AWS RDS PostgreSQL database"
+        echo "Lambda Integration:"
+        echo "  - Uses AWS Lambda for sentiment analysis (serverless)"
+        echo "  - Requires Lambda function 'movie-analyzer-sentiment' to be deployed"
+        echo "  - Uses AWS RDS PostgreSQL for database"
         exit 1
         ;;
 esac 

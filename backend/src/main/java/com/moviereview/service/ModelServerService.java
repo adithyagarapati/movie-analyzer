@@ -1,27 +1,20 @@
 package com.moviereview.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.Map;
 
 @Service
 public class ModelServerService {
 
     @Autowired
-    private WebClient webClient;
-
-    @Value("${model.server.timeout:1000}")
-    private int timeoutMs;
+    private LambdaModelService lambdaModelService;
 
     private boolean modelServerConnected = true; // For admin simulation
 
     /**
-     * Analyze sentiment of review text
+     * Analyze sentiment of review text using AWS Lambda
      */
     public SentimentResult analyzeSentiment(String reviewText) {
         if (!modelServerConnected) {
@@ -29,62 +22,21 @@ public class ModelServerService {
         }
 
         try {
-            System.out.println("🤖 Calling model server for sentiment analysis: " + reviewText.substring(0, Math.min(50, reviewText.length())) + "...");
-            
-            Map<String, Object> response = webClient.post()
-                    .uri("/analyze")
-                    .bodyValue(Map.of("text", reviewText))
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(Duration.ofMillis(timeoutMs))
-                    .block();
-
-            if (response != null && response.containsKey("sentiment")) {
-                String sentiment = (String) response.get("sentiment");
-                Double score = response.get("score") != null ? 
-                    Double.valueOf(response.get("score").toString()) : 0.0;
-                Double rating = response.get("rating") != null ? 
-                    Double.valueOf(response.get("rating").toString()) : 3.0;
-                
-                System.out.println("✅ Model server response: " + sentiment + " (score: " + score + ", rating: " + rating + " stars)");
-                return new SentimentResult(sentiment, score, rating);
-            } else {
-                System.err.println("❌ Invalid response from model server");
-                throw new ModelServerException("Invalid response from model server");
-            }
-            
-        } catch (Exception e) {
-            System.err.println("❌ Failed to connect to model server: " + e.getMessage());
-            throw new ModelServerException("Model server is down - analysis cannot be done at this moment");
+            LambdaModelService.SentimentResult lambdaResult = lambdaModelService.analyzeSentiment(reviewText);
+            return new SentimentResult(lambdaResult.getSentiment(), lambdaResult.getScore(), lambdaResult.getRating());
+        } catch (LambdaModelService.ModelServerException e) {
+            throw new ModelServerException(e.getMessage());
         }
     }
 
     /**
-     * Check if model server is available
+     * Check if Lambda function is available
      */
     public boolean isModelServerAvailable() {
         if (!modelServerConnected) {
             return false;
         }
-
-        try {
-            System.out.println("🔍 Checking model server health...");
-            
-            Map<String, Object> response = webClient.get()
-                    .uri("/health")
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .timeout(Duration.ofMillis(3000))
-                    .block();
-
-            boolean available = response != null && "healthy".equals(response.get("status"));
-            System.out.println(available ? "✅ Model server is healthy" : "❌ Model server is unhealthy");
-            return available;
-            
-        } catch (Exception e) {
-            System.err.println("❌ Model server health check failed: " + e.getMessage());
-            return false;
-        }
+        return lambdaModelService.isLambdaAvailable();
     }
 
     /**
@@ -93,6 +45,9 @@ public class ModelServerService {
     public void toggleModelConnection() {
         modelServerConnected = !modelServerConnected;
         System.out.println("🔧 Model server connection toggled: " + (modelServerConnected ? "ENABLED" : "DISABLED"));
+        
+        // Also toggle Lambda connection
+        lambdaModelService.toggleLambdaConnection();
     }
 
     /**
@@ -100,6 +55,18 @@ public class ModelServerService {
      */
     public boolean isModelConnectionEnabled() {
         return modelServerConnected;
+    }
+
+    /**
+     * Get current server configuration (Lambda only)
+     */
+    public Map<String, Object> getServerConfig() {
+        Map<String, Object> lambdaConfig = lambdaModelService.getLambdaConfig();
+        return Map.of(
+            "mode", "lambda",
+            "connected", modelServerConnected,
+            "lambda", lambdaConfig
+        );
     }
 
     /**
@@ -130,7 +97,7 @@ public class ModelServerService {
     }
 
     /**
-     * Custom exception for model server issues
+     * Exception for model server errors
      */
     public static class ModelServerException extends RuntimeException {
         public ModelServerException(String message) {

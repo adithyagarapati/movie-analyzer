@@ -9,8 +9,9 @@ resources:
   # Namespace
   - namespace.yaml
   
-  # Backend
+  # Backend (with Lambda integration)
   - backend/secret.yaml
+  - backend/serviceaccount.yaml
   - backend/deployment.yaml
   - backend/service.yaml
   
@@ -18,10 +19,6 @@ resources:
   - frontend/deployment.yaml
   - frontend/service.yaml
   - frontend/ingress.yaml
-  
-  # Model
-  - model/deployment.yaml
-  - model/service.yaml
 
 # Common labels applied to all resources
 commonLabels:
