@@ -1,5 +1,6 @@
 # Default values for movie-analyzer
 # This values.yaml file contains simplified parameterized configurations
+# Database: Uses external AWS RDS PostgreSQL (not containerized)
 
 global:
   namespace: movie-analyzer
@@ -28,7 +29,9 @@ backend:
       cpu: "1000m"
   
   env:
-    DB_HOST: "database"
+    # Database connection - Configure these to point to your AWS RDS instance
+    # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.us-east-1.rds.amazonaws.com)
+    DB_HOST: "your-rds-endpoint.region.rds.amazonaws.com"
     DB_PORT: "5432"
     DB_NAME: "moviereviews"
     MODEL_SERVER_URL: "http://model:5000"
@@ -47,9 +50,10 @@ backend:
       periodSeconds: 10
   
   secret:
-    # Base64 encoded values: movieuser:moviepass
-    DB_USERNAME: bW92aWV1c2Vy
-    DB_PASSWORD: bW92aWVwYXNz
+    # Base64 encoded values for RDS database credentials
+    # Update these with your actual RDS username and password
+    DB_USERNAME: bW92aWV1c2Vy  # movieuser (base64)
+    DB_PASSWORD: bW92aWVwYXNz  # moviepass (base64)
 
 # Frontend configuration
 frontend:
@@ -127,41 +131,6 @@ model:
       port: 5000
       initialDelaySeconds: 10
       periodSeconds: 10
-
-# PostgreSQL database configuration
-postgres:
-  name: database
-  replicaCount: 1
-  
-  image:
-    repository: postgres
-    tag: 15-alpine
-    pullPolicy: IfNotPresent
-  
-  service:
-    type: ClusterIP
-    port: 5432
-    targetPort: 5432
-  
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "250m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
-  
-  secret:
-    # Base64 encoded values: postgres:postgres:moviereviews
-    POSTGRES_USER: cG9zdGdyZXM=
-    POSTGRES_PASSWORD: cG9zdGdyZXM=
-    POSTGRES_DB: bW92aWVyZXZpZXdz
-  
-  persistence:
-    enabled: true
-    storageClass: manual
-    size: 1Gi
-    hostPath: /mnt/data/postgres
 
 # Ingress configuration (optional)
 ingress:

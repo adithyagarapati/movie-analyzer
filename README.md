@@ -1,23 +1,24 @@
 # Movie Analyzer
 
-A comprehensive full-stack movie review application with sentiment analysis capabilities, designed for demonstrating modern DevOps practices, microservices architecture, and Kubernetes/Docker deployment strategies.
+A comprehensive full-stack movie review application with sentiment analysis capabilities, designed for demonstrating modern DevOps practices, microservices architecture, and Kubernetes/Docker deployment strategies using **AWS RDS PostgreSQL**.
 
 ## 🎬 Overview
 
-Movie Analyzer is a multi-service application that allows users to browse movies, submit reviews, and automatically analyze sentiment using machine learning. The application showcases modern web development practices with Spring Boot, React, Python Flask, and PostgreSQL, all containerized and ready for Kubernetes/Docker deployment.
+Movie Analyzer is a multi-service application that allows users to browse movies, submit reviews, and automatically analyze sentiment using machine learning. The application showcases modern web development practices with Spring Boot, React, Python Flask, and **AWS RDS PostgreSQL**, designed for cloud-native deployment on Kubernetes/Docker.
 
 ### Key Features
 
 - **Movie Reviews**: Browse and submit reviews for 6 popular movies
 - **Sentiment Analysis**: Automatic sentiment scoring and rating generation using TextBlob
 - **Admin Controls**: Toggle service health, simulate failures, monitor system status
-- **Microservices Architecture**: Separate services for frontend, backend, ML model, and database
+- **Microservices Architecture**: Separate services for frontend, backend, ML model with external database
+- **Cloud-Native Database**: Uses AWS RDS PostgreSQL for production-ready database management
 - **Health Monitoring**: Comprehensive health checks and status monitoring
 - **Modern UI**: Responsive React interface with real-time status updates
 
 ## 🏗️ Architecture
 
-The application consists of four main services:
+The application consists of three containerized services connected to an external AWS RDS PostgreSQL database:
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -28,6 +29,7 @@ The application consists of four main services:
                             │
                             ▼
                    ┌─────────────┐
+                   │  AWS RDS    │
                    │ PostgreSQL  │
                    │ Port: 5432  │
                    └─────────────┘
@@ -50,7 +52,7 @@ The application consists of four main services:
 - **Technology**: Java 21, Spring Boot 3.5, Maven
 - **Features**:
   - RESTful API for review management
-  - Database integration with JPA/Hibernate
+  - AWS RDS PostgreSQL integration with JPA/Hibernate
   - Model server communication for sentiment analysis
   - Admin controls for health simulation
   - Rate limiting and error handling
@@ -76,35 +78,59 @@ The application consists of four main services:
   - `POST /admin/toggle-health` - Toggle service health
 - **Sentiment Categories**: Positive (4-5 stars), Neutral (2.5-3.5 stars), Negative (1-2 stars)
 
-#### 🗄️ Database (PostgreSQL)
-- **Technology**: PostgreSQL 15-alpine
+#### 🗄️ Database (AWS RDS PostgreSQL)
+- **Technology**: AWS RDS PostgreSQL 15.x
 - **Features**:
+  - Managed cloud database service
   - Review storage with sentiment data
   - User management (movieuser/moviepass)
-  - Sample data included
-  - Performance indexes
-  - Review statistics view
+  - Sample data included via initialization script
+  - Performance indexes and monitoring
+  - Automated backups and scaling
 - **Schema**: `reviews` table with movie_id, review_text, sentiment, rating, timestamps
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
+- **AWS Account**: With RDS access for database setup
 - **Docker & Docker Compose**: For local development
 - **Kubernetes**: For production deployment (Minikube, K3s, or full cluster)
 - **Helm 3.x**: For Helm-based deployment
 - **kubectl**: For Kubernetes management
+- **PostgreSQL Client**: For database initialization (psql)
+
+### 🗄️ Database Setup (Required First)
+
+**⚠️ Important**: Before deploying the application, you must set up an AWS RDS PostgreSQL instance.
+
+📋 **Follow the detailed guide**: [`RDS_SETUP.md`](./RDS_SETUP.md)
+
+This guide covers:
+- Creating AWS RDS PostgreSQL instance
+- Configuring security groups and networking
+- Running the database initialization script
+- Testing connectivity
 
 ### Local Development with Docker Compose
 
-The fastest way to run the application locally:
+After setting up your RDS database:
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd movie-analyzer
 
-# Start all services
+# Create .env file with your RDS connection details
+cat > .env << EOF
+DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=moviereviews
+DB_USERNAME=movieuser
+DB_PASSWORD=moviepass
+EOF
+
+# Start services (database is external RDS)
 docker-compose up -d --build
 
 # View logs
@@ -119,18 +145,18 @@ docker-compose down
 
 ### Docker Compose Configuration
 
-The `docker-compose.yml` provides:
+The `docker-compose.yml` provides three services connected to external RDS:
 
 ```yaml
 services:
-  database:    # PostgreSQL 15-alpine
   model:       # Python Flask sentiment analysis
-  backend:     # Java Spring Boot API
+  backend:     # Java Spring Boot API (connects to RDS)
   frontend:    # React + Express web app
 ```
 
-**Environment Variables:**
-- `DB_HOST=database`, `DB_PORT=5432`, `DB_NAME=moviereviews`
+**Environment Variables for RDS:**
+- `DB_HOST`: Your RDS endpoint
+- `DB_PORT=5432`, `DB_NAME=moviereviews`
 - `DB_USERNAME=movieuser`, `DB_PASSWORD=moviepass`
 - `MODEL_SERVER_URL=http://model:5000`
 - `BACKEND_API_URL=http://backend:8080`
@@ -145,6 +171,10 @@ Deploy using organized Kubernetes manifests:
 # Navigate to manifests directory
 cd deploy/manifests
 
+# Update RDS endpoint in backend/deployment.yaml
+# Replace: your-rds-endpoint.region.rds.amazonaws.com
+# With your actual RDS endpoint
+
 # Deploy everything
 ./deploy.sh deploy
 
@@ -157,7 +187,7 @@ kubectl get all -n movie-analyzer
 # Access application
 # Frontend available at: http://localhost:30000
 
-# Clean up
+# Clean up (RDS database remains unaffected)
 ./deploy.sh cleanup
 ```
 
@@ -166,9 +196,9 @@ kubectl get all -n movie-analyzer
 deploy/manifests/
 ├── namespace.yaml              # movie-analyzer namespace
 ├── backend/
-│   ├── deployment.yaml         # 1 replica, 512Mi/500m requests
+│   ├── deployment.yaml         # 1 replica, 512Mi/500m requests (configured for RDS)
 │   ├── service.yaml           # ClusterIP service
-│   └── secret.yaml            # Database credentials
+│   └── secret.yaml            # RDS database credentials
 ├── frontend/
 │   ├── deployment.yaml         # 1 replica, 256Mi/250m requests  
 │   ├── service.yaml           # NodePort 30000
@@ -176,12 +206,6 @@ deploy/manifests/
 ├── model/
 │   ├── deployment.yaml         # 1 replica, 256Mi/250m requests
 │   └── service.yaml           # ClusterIP service
-├── postgres/
-│   ├── deployment.yaml         # 1 replica with persistence
-│   ├── service.yaml           # ClusterIP service
-│   ├── pvc.yaml               # 1Gi persistent volume
-│   ├── secret.yaml            # Database secrets
-│   └── configmap.yaml         # Initialization scripts
 ├── deploy.sh                  # Deployment automation
 ├── kustomization.yaml         # Kustomize configuration
 └── README.md                  # Deployment documentation
@@ -192,7 +216,7 @@ deploy/manifests/
 Alternative deployment using Kubernetes-native Kustomize:
 
 ```bash
-# Deploy with kustomize
+# Update RDS endpoint in backend/deployment.yaml first
 cd deploy/manifests
 kubectl apply -k .
 
@@ -211,19 +235,23 @@ kubectl delete -k .
 Deploy using parameterized Helm charts:
 
 ```bash
-# Install with Helm
+# Navigate to Helm directory
 cd deploy/helm
+
+# Update values.yaml with your RDS endpoint
+# Replace: your-rds-endpoint.region.rds.amazonaws.com
+
+# Install with Helm
 helm install movie-analyzer . -n movie-analyzer --create-namespace
+
+# Or install with command-line override
+helm install movie-analyzer . -n movie-analyzer --create-namespace \
+  --set backend.env.DB_HOST="your-actual-rds-endpoint.region.rds.amazonaws.com"
 
 # Upgrade deployment
 helm upgrade movie-analyzer . -n movie-analyzer
 
-# Customize values
-helm install movie-analyzer . -n movie-analyzer --create-namespace \
-  --set frontend.replicaCount=1 \
-  --set backend.resources.requests.memory=1Gi
-
-# Uninstall
+# Uninstall (RDS database remains unaffected)
 helm uninstall movie-analyzer -n movie-analyzer
 ```
 
@@ -244,13 +272,14 @@ backend.resources.limits.memory: "1Gi"
 backend.image.repository: artisantek/movie-analyzer
 backend.image.tag: backend
 
+# RDS Database configuration
+backend.env.DB_HOST: "your-rds-endpoint.region.rds.amazonaws.com"
+backend.env.DB_PORT: "5432"
+backend.env.DB_NAME: "moviereviews"
+
 # Service configuration
 frontend.service.nodePort: 30000
 backend.service.port: 8080
-
-# Environment variables
-backend.env.DB_HOST: "database"
-backend.env.MODEL_SERVER_URL: "http://model:5000"
 
 # Ingress (optional)
 ingress.enabled: false
@@ -261,12 +290,12 @@ ingress.host: movie.artisantek.in
 ```
 deploy/helm/
 ├── Chart.yaml                 # Chart metadata
-├── values.yaml               # Default configuration values
+├── values.yaml               # Default configuration values (RDS configured)
 ├── templates/
 │   ├── backend/
-│   │   ├── deployment.yaml    # Parameterized backend deployment
+│   │   ├── deployment.yaml    # Parameterized backend deployment (RDS)
 │   │   ├── service.yaml       # Backend service template
-│   │   └── secret.yaml        # Backend secrets template
+│   │   └── secret.yaml        # RDS credentials template
 │   ├── frontend/
 │   │   ├── deployment.yaml    # Frontend deployment template
 │   │   ├── service.yaml       # Frontend service template
@@ -274,12 +303,6 @@ deploy/helm/
 │   ├── model/
 │   │   ├── deployment.yaml    # Model service template
 │   │   └── service.yaml       # Model service template
-│   ├── postgres/
-│   │   ├── deployment.yaml    # Database deployment template
-│   │   ├── service.yaml       # Database service template
-│   │   ├── pvc.yaml           # Persistent volume template
-│   │   ├── secret.yaml        # Database secrets template
-│   │   └── configmap.yaml     # Database config template
 │   └── namespace.yaml         # Namespace template
 └── README.md                  # Helm-specific documentation
 ```
@@ -313,7 +336,7 @@ Access via the floating admin panel in the frontend:
 ### Testing Scenarios
 
 1. **Backend Failure**: Toggle backend health to test frontend error handling
-2. **Database Connectivity**: Simulate database connection issues
+2. **Database Connectivity**: Simulate RDS connection issues
 3. **Model Server Failure**: Test sentiment analysis service failures
 4. **Overload Simulation**: Test backend overload scenarios
 
@@ -411,8 +434,8 @@ docker build -t movie-model ./model
 
 ### Environment Variables
 
-#### Backend
-- `DB_HOST`: Database hostname (default: database)
+#### Backend (RDS Configuration)
+- `DB_HOST`: RDS endpoint (required - update with your actual endpoint)
 - `DB_PORT`: Database port (default: 5432)
 - `DB_NAME`: Database name (default: moviereviews)
 - `DB_USERNAME`: Database user (default: movieuser)
@@ -426,12 +449,9 @@ docker build -t movie-model ./model
 #### Model
 - `MODEL_PORT`: Model service port (default: 5000)
 
-#### Database
-- `POSTGRES_DB`: Database name (default: moviereviews)
-- `POSTGRES_USER`: Database user (default: postgres)
-- `POSTGRES_PASSWORD`: Database password (default: postgres)
-
 ### Database Schema
+
+The AWS RDS PostgreSQL database uses this schema:
 
 ```sql
 CREATE TABLE reviews (
@@ -452,7 +472,7 @@ CREATE INDEX idx_reviews_sentiment ON reviews(sentiment);
 
 ### Sample Data
 
-The database includes sample reviews for all 6 movies:
+The database initialization script (`database/init.sql`) includes sample reviews for all 6 movies:
 - **The Shawshank Redemption** (shawshank)
 - **Inception** (inception)  
 - **Interstellar** (interstellar)
@@ -488,10 +508,6 @@ The database includes sample reviews for all 6 movies:
 - **Requests**: 256Mi memory, 250m CPU
 - **Limits**: 512Mi memory, 500m CPU
 
-#### Database
-- **Requests**: 256Mi memory, 250m CPU
-- **Limits**: 512Mi memory, 500m CPU
-
 ## 📁 Project Structure
 
 ```
@@ -521,26 +537,58 @@ movie-analyzer/
 │   ├── Dockerfile
 │   └── README.md
 ├── database/                  # Database initialization
-│   └── init.sql             # Database schema and sample data
+│   └── init.sql             # Database schema and sample data (for RDS setup)
 ├── deploy/                    # Deployment configurations
-│   ├── manifests/           # Kubernetes manifests
+│   ├── manifests/           # Kubernetes manifests (RDS configured)
 │   │   ├── backend/
 │   │   ├── frontend/
 │   │   ├── model/
-│   │   ├── postgres/
 │   │   ├── deploy.sh        # Deployment script
 │   │   ├── kustomization.yaml
 │   │   └── README.md
-│   └── helm/                # Helm chart
+│   └── helm/                # Helm chart (RDS configured)
 │       ├── templates/
 │       ├── Chart.yaml
 │       ├── values.yaml
 │       └── README.md
-├── docker-compose.yml         # Local development setup
+├── RDS_SETUP.md              # AWS RDS PostgreSQL setup guide
+├── docker-compose.yml        # Local development setup (RDS configured)
 ├── .gitignore
 └── README.md                 # This file
 ```
 
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Backend Connection Issues:**
+- Check RDS endpoint configuration in deployment files
+- Verify RDS security groups allow traffic from your services
+- Ensure RDS database is initialized with `database/init.sql`
+
+**Database Errors:**
+- Confirm `moviereviews` database exists in RDS
+- Verify `movieuser` has proper permissions
+- Check RDS parameter group settings
+
+**Deployment Issues:**
+- Ensure RDS endpoint is updated in configuration files
+- Check Kubernetes secrets contain correct credentials
+- Verify network connectivity between services and RDS
+
+### Logs and Debugging
+
+```bash
+# Check backend logs for database connectivity
+kubectl logs -l app=backend -n movie-analyzer
+
+# Check service status
+kubectl get pods -n movie-analyzer
+
+# Test RDS connectivity
+psql -h YOUR_RDS_ENDPOINT -U movieuser -d moviereviews -c "SELECT COUNT(*) FROM reviews;"
+```
+
 ---
 
-**Movie Analyzer** - Demonstrating modern DevOps practices with microservices, containers, and Kubernetes orchestration. 
+**Movie Analyzer** - Demonstrating modern cloud-native DevOps practices with microservices, containers, Kubernetes orchestration, and AWS RDS PostgreSQL. 

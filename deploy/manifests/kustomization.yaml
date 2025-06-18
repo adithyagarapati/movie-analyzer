@@ -22,13 +22,6 @@ resources:
   # Model
   - model/deployment.yaml
   - model/service.yaml
-  
-  # PostgreSQL
-  - postgres/secret.yaml
-  - postgres/configmap.yaml
-  - postgres/pvc.yaml
-  - postgres/deployment.yaml
-  - postgres/service.yaml
 
 # Common labels applied to all resources
 commonLabels:

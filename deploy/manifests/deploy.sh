@@ -2,6 +2,7 @@
 
 # Movie Analyzer Kubernetes Deployment Script
 # This script deploys the movie analyzer application using organized manifests
+# Database: Uses external AWS RDS PostgreSQL (not containerized)
 
 set -e
 
@@ -60,14 +61,15 @@ apply_manifests() {
 # Function to delete all resources
 cleanup() {
     print_warning "This will delete the entire Movie Analyzer deployment!"
+    print_warning "Note: This does NOT affect your AWS RDS database"
     read -p "Are you sure you want to continue? (y/N): " -n 1 -r
     echo
     
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_status "Cleaning up Movie Analyzer deployment..."
         kubectl delete namespace "$NAMESPACE" --ignore-not-found=true
-        kubectl delete pv postgres-pv --ignore-not-found=true
         print_success "Cleanup completed successfully!"
+        print_status "Your AWS RDS database remains unaffected"
     else
         print_status "Cleanup cancelled."
     fi
@@ -90,10 +92,6 @@ status() {
     kubectl get services -n "$NAMESPACE" 2>/dev/null || print_warning "No services found"
     
     echo
-    print_status "PVCs:"
-    kubectl get pvc -n "$NAMESPACE" 2>/dev/null || print_warning "No PVCs found"
-    
-    echo
     print_status "Frontend NodePort access:"
     NODE_PORT=$(kubectl get svc frontend -n "$NAMESPACE" -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "N/A")
     if [ "$NODE_PORT" != "N/A" ]; then
@@ -101,13 +99,17 @@ status() {
     else
         print_warning "Frontend service not accessible"
     fi
+    
+    echo
+    print_status "Database Connection:"
+    print_warning "Using external AWS RDS PostgreSQL - ensure your RDS instance is configured and accessible"
 }
 
 # Function to get logs
 logs() {
     local service=$1
     if [ -z "$service" ]; then
-        print_error "Please specify a service: backend, frontend, model, or database"
+        print_error "Please specify a service: backend, frontend, or model"
         exit 1
     fi
     
@@ -118,19 +120,15 @@ logs() {
 # Main deployment function
 deploy() {
     print_status "Starting Movie Analyzer deployment..."
+    print_warning "Make sure your AWS RDS PostgreSQL database is configured and accessible!"
     echo
     
     # Apply in order: namespace first, then dependencies, then applications
     print_status "Creating namespace..."
     kubectl apply -f "$MANIFEST_DIR/namespace.yaml"
     
-    # Apply secrets first (needed by other resources)
-    apply_manifests "backend"  # Contains backend-secret
-    apply_manifests "postgres" # Contains postgres-secret and database resources
-    
-    # Wait for database to be ready
-    print_status "Waiting for database to be ready..."
-    kubectl wait --for=condition=available deployment/database -n "$NAMESPACE" --timeout=300s
+    # Apply backend secrets and services
+    apply_manifests "backend"
     
     # Apply application services
     apply_manifests "model"
@@ -142,6 +140,7 @@ deploy() {
     
     echo
     print_success "Movie Analyzer deployed successfully!"
+    print_warning "Remember to configure backend environment variables to point to your RDS endpoint"
     echo
     status
 }
@@ -167,8 +166,9 @@ case "$1" in
         echo "  deploy    - Deploy the movie analyzer application"
         echo "  cleanup   - Remove the entire deployment"
         echo "  status    - Show deployment status"
-        echo "  logs      - Show logs for a specific service (backend|frontend|model|database)"
+        echo "  logs      - Show logs for a specific service (backend|frontend|model)"
         echo
+        echo "Note: This deployment uses external AWS RDS PostgreSQL database"
         exit 1
         ;;
 esac 

@@ -1,18 +1,4 @@
 services:
-  # PostgreSQL Database
-  database:
-    image: postgres:15-alpine
-    container_name: database
-    environment:
-      POSTGRES_DB: moviereviews
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - movie
-
   # Model Server (Python Flask)
   model:
     build: ./model
@@ -22,23 +8,24 @@ services:
       - movie
 
   # Backend (Java Spring Boot) - Updated to Java 21, Spring Boot 3.5
+  # Database connection now points to external AWS RDS PostgreSQL
   backend:
     build: ./backend
     image: movie-review-backend:latest
     container_name: backend
     environment:
-      # Database connection (keeping original variable names)
-      DB_HOST: database
-      DB_PORT: 5432
-      DB_NAME: moviereviews
-      DB_USERNAME: movieuser
-      DB_PASSWORD: moviepass
+      # Database connection - Configure these to point to your AWS RDS instance
+      # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.us-east-1.rds.amazonaws.com)
+      DB_HOST: ${DB_HOST:-your-rds-endpoint.region.rds.amazonaws.com}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-moviereviews}
+      DB_USERNAME: ${DB_USERNAME:-movieuser}
+      DB_PASSWORD: ${DB_PASSWORD:-moviepass}
       MODEL_SERVER_URL: http://model:5000
       SERVER_PORT: 8080
     networks:
       - movie
     depends_on:
-      - database
       - model
 
   # Frontend (React + Express) - Updated to Node 24, React 19.1
@@ -59,6 +46,3 @@ services:
 networks:
   movie:
     driver: bridge
-
-volumes:
-  postgres_data:

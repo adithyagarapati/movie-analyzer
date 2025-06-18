@@ -1,5 +1,6 @@
 ---
 # Backend Deployment
+# Database: Uses external AWS RDS PostgreSQL (not containerized)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,8 +24,10 @@ spec:
         ports:
         - containerPort: 8080
         env:
+        # Database connection - Configure these to point to your AWS RDS instance
+        # Update DB_HOST with your RDS endpoint
         - name: DB_HOST
-          value: "database"
+          value: "your-rds-endpoint.region.rds.amazonaws.com"
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
