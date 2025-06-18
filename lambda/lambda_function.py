@@ -2,6 +2,26 @@ import json
 import time
 import os
 
+# Initialize NLTK data for TextBlob (do this once at module load)
+try:
+    import nltk
+    import ssl
+    
+    # Handle SSL certificate issues in Lambda
+    try:
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+    else:
+        ssl._create_default_https_context = _create_unverified_https_context
+    
+    # Download required NLTK data
+    nltk.download('punkt', quiet=True)
+    nltk.download('brown', quiet=True)
+    print("📚 NLTK data initialized for TextBlob")
+except Exception as e:
+    print(f"⚠️ NLTK initialization warning: {e}")
+
 def lambda_handler(event, context):
     """
     AWS Lambda handler for movie review sentiment analysis
@@ -110,37 +130,14 @@ def lambda_handler(event, context):
 
 def analyze_sentiment_and_rating(text):
     """
-    Simple sentiment analysis using keyword matching (no external dependencies)
+    Analyze sentiment and generate rating using TextBlob (same as original model)
     """
     try:
-        # Convert to lowercase for analysis
-        text_lower = text.lower()
+        # Use TextBlob for sentiment analysis (same as original model)
+        from textblob import TextBlob
         
-        # Define sentiment keywords
-        positive_words = [
-            'amazing', 'awesome', 'excellent', 'fantastic', 'great', 'wonderful', 
-            'brilliant', 'outstanding', 'superb', 'magnificent', 'incredible',
-            'love', 'perfect', 'beautiful', 'best', 'good', 'nice', 'enjoyed',
-            'recommend', 'masterpiece', 'spectacular', 'phenomenal', 'delightful'
-        ]
-        
-        negative_words = [
-            'terrible', 'horrible', 'awful', 'bad', 'worst', 'hate', 'boring',
-            'stupid', 'waste', 'disappointing', 'annoying', 'ridiculous',
-            'pathetic', 'useless', 'disgusting', 'painful', 'dreadful',
-            'appalling', 'abysmal', 'atrocious', 'mediocre', 'poor'
-        ]
-        
-        # Count sentiment words
-        positive_count = sum(1 for word in positive_words if word in text_lower)
-        negative_count = sum(1 for word in negative_words if word in text_lower)
-        
-        # Calculate sentiment score
-        total_words = len(text_lower.split())
-        word_ratio = (positive_count - negative_count) / max(total_words, 1)
-        
-        # Normalize score to -1 to 1 range
-        polarity = max(-1.0, min(1.0, word_ratio * 10))
+        blob = TextBlob(text)
+        polarity = blob.sentiment.polarity  # Range: -1 (negative) to 1 (positive)
         
         # Determine sentiment category
         if polarity > 0.1:
@@ -152,14 +149,14 @@ def analyze_sentiment_and_rating(text):
         
         # Determine confidence level
         abs_polarity = abs(polarity)
-        if abs_polarity > 0.3:
+        if abs_polarity > 0.5:
             confidence = "high"
-        elif abs_polarity > 0.1:
+        elif abs_polarity > 0.2:
             confidence = "medium"
         else:
             confidence = "low"
         
-        # Generate rating based on sentiment (1-5 stars)
+        # Generate rating based on sentiment (1-5 stars) - same logic as original
         if sentiment == "positive":
             # Positive: 4-5 stars, higher polarity = higher rating
             base_rating = 4.0 + (polarity * 1.0)  # 4.0 to 5.0
