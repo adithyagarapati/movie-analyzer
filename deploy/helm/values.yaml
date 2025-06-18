@@ -13,7 +13,7 @@ backend:
   
   image:
     repository: artisantek/movie-analyzer
-    tag: backend
+    tag: backend-lambda
     pullPolicy: IfNotPresent
   
   service:
@@ -32,7 +32,7 @@ backend:
   env:
     # Database connection - Configure these to point to your AWS RDS instance
     # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.region.rds.amazonaws.com)
-    DB_HOST: "your-rds-endpoint.region.rds.amazonaws.com"
+    DB_HOST: "movie-analyzer-db.cnku6m4wm4rj.ap-south-1.rds.amazonaws.com"
     DB_PORT: "5432"
     DB_NAME: "moviereviews"
     SERVER_PORT: "8080"
@@ -50,7 +50,7 @@ backend:
     name: backend-sa
     annotations:
       # Replace with your actual IAM role ARN when using IAM method
-      eks.amazonaws.com/role-arn: "REPLACE_WITH_IAM_ROLE_ARN"
+      eks.amazonaws.com/role-arn: "arn:aws:iam::879381264703:role/eks-lambda-role"
   
   probes:
     readiness:
@@ -116,8 +116,27 @@ frontend:
 
 # Ingress configuration (optional)
 ingress:
-  enabled: false
+  enabled: true
+  # Ingress type: "alb" for AWS ALB or "nginx" for NGINX ingress controller
+  type: alb  # Options: alb, nginx
   host: movie.artisantek.in
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: / 
+  className: alb  # Will be set to "alb" automatically when type is "alb"
+  
+  # ALB specific configuration
+  alb:
+    scheme: internet-facing
+    targetType: ip
+    certificateArn: arn:aws:acm:ap-south-1:879381264703:certificate/3f86f23b-ac0c-4bf2-9b4c-946e9517ccd6
+    groupName: shared-alb
+    groupOrder: '10'
+  
+  # TLS configuration (mainly for NGINX ingress)
+  tls:
+    enabled: false
+    secretName: movie-tls-secret
+  
+  # Custom annotations (will be added in addition to the default ones based on type)
+  customAnnotations: {}
+    # Example:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"

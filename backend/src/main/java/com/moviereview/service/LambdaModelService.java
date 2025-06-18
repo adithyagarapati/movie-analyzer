@@ -19,25 +19,31 @@ import java.time.Duration;
 @Service
 public class LambdaModelService {
 
-    @Value("${lambda.function.name:movie-analyzer-sentiment}")
     private String functionName;
-
-    @Value("${lambda.region:ap-south-1}")
     private String region;
-
-    @Value("${lambda.timeout:30000}")
     private int timeoutMs;
-
-    @Value("${lambda.auth.method:iam}")
     private String authMethod; // "iam" or "keys"
 
     private final LambdaClient lambdaClient;
     private final ObjectMapper objectMapper;
     private boolean lambdaConnected = true; // For admin simulation
 
-    public LambdaModelService(@Value("${lambda.region:ap-south-1}") String region) {
+    public LambdaModelService() {
+        // Read directly from environment variables 
+        this.functionName = System.getenv("LAMBDA_FUNCTION_NAME");
+        if (this.functionName == null) this.functionName = "movie-analyzer-sentiment";
+        
+        this.region = System.getenv("LAMBDA_REGION");
+        if (this.region == null) this.region = "ap-south-1";
+        
+        String timeoutStr = System.getenv("LAMBDA_TIMEOUT");
+        this.timeoutMs = timeoutStr != null ? Integer.parseInt(timeoutStr) : 30000;
+        
+        this.authMethod = System.getenv("LAMBDA_AUTH_METHOD");
+        if (this.authMethod == null) this.authMethod = "iam";
+        
         this.objectMapper = new ObjectMapper();
-        this.lambdaClient = createLambdaClient(region);
+        this.lambdaClient = createLambdaClient(this.region);
         System.out.println("🔐 Lambda authentication method: " + authMethod);
     }
 

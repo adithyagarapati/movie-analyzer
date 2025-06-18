@@ -50,10 +50,12 @@ spec:
           value: {{ .Values.backend.env.MODEL_SERVER_MODE | quote }}
         - name: LAMBDA_FUNCTION_NAME
           value: {{ .Values.backend.env.LAMBDA_FUNCTION_NAME | quote }}
-        - name: AWS_REGION
+        - name: LAMBDA_REGION
           value: {{ .Values.backend.env.AWS_REGION | quote }}
         - name: LAMBDA_AUTH_METHOD
           value: {{ .Values.backend.env.LAMBDA_AUTH_METHOD | quote }}
+        - name: LAMBDA_TIMEOUT
+          value: "30000"
         
         # AWS Credentials (only if not using IRSA)
         {{- if .Values.backend.secret.AWS_ACCESS_KEY_ID }}
