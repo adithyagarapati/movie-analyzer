@@ -31,7 +31,7 @@ backend:
   env:
     # Database connection - Configure these to point to your AWS RDS instance
     # DB_HOST should be your RDS endpoint (e.g., movie-db.xxxxx.us-east-1.rds.amazonaws.com)
-    DB_HOST: "your-rds-endpoint.region.rds.amazonaws.com"
+    DB_HOST: "movie-analyzer-db.cnku6m4wm4rj.ap-south-1.rds.amazonaws.com"
     DB_PORT: "5432"
     DB_NAME: "moviereviews"
     MODEL_SERVER_URL: "http://model:5000"
@@ -134,8 +134,27 @@ model:
 
 # Ingress configuration (optional)
 ingress:
-  enabled: false
+  enabled: true
+  # Ingress type: "alb" for AWS ALB or "nginx" for NGINX ingress controller
+  type: alb  # Options: alb, nginx
   host: movie.artisantek.in
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: / 
+  className: alb  # Will be set to "alb" automatically when type is "alb"
+  
+  # ALB specific configuration
+  alb:
+    scheme: internet-facing
+    targetType: ip
+    certificateArn: arn:aws:acm:ap-south-1:879381264703:certificate/3f86f23b-ac0c-4bf2-9b4c-946e9517ccd6
+    groupName: shared-alb
+    groupOrder: '10'
+  
+  # TLS configuration (mainly for NGINX ingress)
+  tls:
+    enabled: false
+    secretName: movie-tls-secret
+  
+  # Custom annotations (will be added in addition to the default ones based on type)
+  customAnnotations: {}
+    # Example:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
