@@ -206,6 +206,21 @@ model/instance/
 model/.webassets-cache
 
 # =====================================
+# AWS Lambda
+# =====================================
+# Lambda build artifacts and temporary files
+lambda/package/
+lambda/build/
+lambda/*-temp*.zip
+lambda/*-fixed*.zip
+lambda/lambda-simple.zip
+
+# Lambda function response files (from testing)
+lambda/*-response.json
+lambda/response.json
+lambda/test-*.json
+
+# =====================================
 # Docker
 # =====================================
 # Don't ignore Dockerfiles, but ignore generated files
@@ -343,6 +358,9 @@ node_modules/
 *.tar.bz2
 *.rar
 *.7z
+
+# Exception: Keep Lambda deployment package
+!lambda/lambda-deployment-package.zip
 
 # =====================================
 # Testing
