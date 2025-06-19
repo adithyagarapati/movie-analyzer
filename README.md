@@ -1,10 +1,6 @@
 # Movie Analyzer - Lambda Integration
 
-A comprehensive full-stack movie review application with serverless sentiment analysis capabilities, designed for demonstrating modern DevOps practices, cloud-native architecture, and AWS Lambda integration using **AWS RDS PostgreSQL**.
-
-## 🎬 Overview
-
-Movie Analyzer is a cloud-native application that allows users to browse movies, submit reviews, and automatically analyze sentiment using **AWS Lambda**. The application showcases modern web development practices with Spring Boot, React, and **AWS serverless services**, designed for cloud-native deployment on Kubernetes/Docker.
+A comprehensive full-stack movie review application with serverless sentiment analysis capabilities, designed for demonstrating modern DevOps practices, cloud-native architecture, **AWS Lambda** integration and **AWS RDS PostgreSQL**.
 
 ### Key Features
 
@@ -14,26 +10,12 @@ Movie Analyzer is a cloud-native application that allows users to browse movies,
 - **Cloud-Native Architecture**: Frontend and backend services with AWS Lambda and RDS
 - **AWS RDS PostgreSQL**: Production-ready managed database service
 - **Health Monitoring**: Comprehensive health checks and status monitoring
-- **Modern UI**: Responsive React interface with real-time status updates
 
 ## 🏗️ Architecture
 
 The application consists of two containerized services integrated with AWS Lambda and RDS:
 
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Frontend  │───▶│   Backend   │───▶│ AWS Lambda  │
-│  (React)    │    │(Spring Boot)│    │(Sentiment)  │
-│  Port: 3000 │    │ Port: 8080  │    │ Serverless  │
-└─────────────┘    └─────────────┘    └─────────────┘
-                            │
-                            ▼
-                   ┌─────────────┐
-                   │  AWS RDS    │
-                   │ PostgreSQL  │
-                   │ Port: 5432  │
-                   └─────────────┘
-```
+<img src="movie-analyzer-lambda-dark.png" alt="Movie Analyzer Architecture" width="1000"/>
 
 ### Services
 
@@ -44,7 +26,6 @@ The application consists of two containerized services integrated with AWS Lambd
   - Movie detail pages with review submission
   - Admin panel for service health monitoring
   - Real-time health checks and status updates
-  - Responsive design with modern UI
 - **Ports**: 3000 (development), exposed via NodePort 30000 in Kubernetes
 - **Health Endpoint**: `/health`
 
@@ -55,9 +36,6 @@ The application consists of two containerized services integrated with AWS Lambd
   - AWS RDS PostgreSQL integration with JPA/Hibernate
   - AWS Lambda integration for sentiment analysis
   - Admin controls for health simulation
-  - Rate limiting and error handling
-  - Spring Actuator for monitoring
-  - Multiple AWS authentication methods (IRSA, credentials, profiles)
 - **Main Endpoints**:
   - `GET /api/reviews/{movieId}` - Get reviews for a movie
   - `POST /api/reviews` - Submit a new review
@@ -69,7 +47,7 @@ The application consists of two containerized services integrated with AWS Lambd
 #### 🔗 AWS Lambda Function
 - **Technology**: Python 3.12, TextBlob, NLTK
 - **Features**:
-  - Serverless sentiment analysis using TextBlob
+  - Serverless sentiment analysis
   - Automatic rating generation (1-5 stars) based on sentiment
   - Pay-per-request pricing model
   - Auto-scaling based on demand
@@ -88,13 +66,6 @@ The application consists of two containerized services integrated with AWS Lambd
 
 #### 🗄️ Database (AWS RDS PostgreSQL)
 - **Technology**: AWS RDS PostgreSQL 15.x
-- **Features**:
-  - Managed cloud database service
-  - Review storage with sentiment data
-  - User management (movieuser/moviepass)
-  - Sample data included via initialization script
-  - Performance indexes and monitoring
-  - Automated backups and scaling
 - **Schema**: `reviews` table with movie_id, review_text, sentiment, rating, timestamps
 
 ## 🚀 Getting Started
@@ -129,24 +100,24 @@ After setting up your RDS database and deploying the Lambda function:
 git clone <repository-url>
 cd movie-analyzer
 
-# Create .env file with your RDS and Lambda configuration
-cat > .env << EOF
+# Edit Dockercompose file with RDS and Lambda configs
+
 # Database Configuration
-DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
-DB_PORT=5432
-DB_NAME=moviereviews
-DB_USERNAME=movieuser
-DB_PASSWORD=moviepass
+# DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
+# DB_PORT=5432
+# DB_NAME=moviereviews
+# DB_USERNAME=movieuser
+# DB_PASSWORD=moviepass
 
 # Lambda Configuration
-LAMBDA_FUNCTION_NAME=movie-analyzer-sentiment
-AWS_REGION=ap-south-1
-LAMBDA_AUTH_METHOD=keys
+# LAMBDA_FUNCTION_NAME=movie-analyzer-sentiment
+# AWS_REGION=ap-south-1
+# LAMBDA_AUTH_METHOD=keys
 
 # AWS Credentials (only needed for 'keys' method)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-EOF
+# AWS_ACCESS_KEY_ID=your-access-key
+# AWS_SECRET_ACCESS_KEY=your-secret-key
+
 
 # Start services (sentiment analysis via Lambda)
 docker-compose up -d --build
@@ -251,48 +222,17 @@ cd deploy/helm
 # Replace: your-rds-endpoint.region.rds.amazonaws.com
 
 # Install with Helm
-helm install movie-analyzer . -n movie-analyzer --create-namespace
+helm install movie-analyzer .
 
 # Or install with command-line override
-helm install movie-analyzer . -n movie-analyzer --create-namespace \
+helm install movie-analyzer . \
   --set backend.env.DB_HOST="your-actual-rds-endpoint.region.rds.amazonaws.com"
 
 # Upgrade deployment
-helm upgrade movie-analyzer . -n movie-analyzer
+helm upgrade movie-analyzer .
 
 # Uninstall (RDS database remains unaffected)
-helm uninstall movie-analyzer -n movie-analyzer
-```
-
-**Helm Configuration:**
-
-The Helm chart provides extensive customization through `values.yaml`:
-
-```yaml
-# Resource scaling
-backend.replicaCount: 1
-frontend.replicaCount: 1
-
-# Resource limits
-backend.resources.requests.memory: "512Mi"
-backend.resources.limits.memory: "1Gi"
-
-# Image configuration
-backend.image.repository: artisantek/movie-analyzer
-backend.image.tag: backend
-
-# RDS Database configuration
-backend.env.DB_HOST: "your-rds-endpoint.region.rds.amazonaws.com"
-backend.env.DB_PORT: "5432"
-backend.env.DB_NAME: "moviereviews"
-
-# Service configuration
-frontend.service.nodePort: 30000
-backend.service.port: 8080
-
-# Ingress (optional)
-ingress.enabled: false
-ingress.host: movie.artisantek.in
+helm uninstall movie-analyzer
 ```
 
 **Helm Structure:**
@@ -332,12 +272,6 @@ Access via the floating admin panel in the frontend:
 2. **Health Toggle Controls**: Simulate service failures
 3. **System Information**: Memory usage, uptime, processor count
 4. **Error Simulation**: Test failure scenarios and recovery
-
-#### Monitoring Endpoints
-- **Backend Status**: `GET /api/admin/status`
-- **Backend Health**: `GET /api/admin/health`
-- **Lambda Status**: Included in backend status
-- **System Info**: `GET /api/admin/info`
 
 ### Testing Scenarios
 
@@ -445,16 +379,6 @@ docker build -t movie-frontend ./frontend
 - **Backend**: `/actuator/health` (10s interval)
 - **Frontend**: `/health` (10s interval)
 
-### Resource Limits
-
-#### Backend
-- **Requests**: 512Mi memory, 500m CPU
-- **Limits**: 1Gi memory, 1000m CPU
-
-#### Frontend
-- **Requests**: 256Mi memory, 250m CPU
-- **Limits**: 512Mi memory, 500m CPU
-
 ## 📁 Project Structure
 
 ```
@@ -504,38 +428,6 @@ movie-analyzer/
 ├── docker-compose.yml        # Local development setup (Lambda configured)
 ├── .gitignore
 └── README.md                 # This file
-```
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**Backend Connection Issues:**
-- Check RDS endpoint configuration in deployment files
-- Verify RDS security groups allow traffic from your services
-- Ensure RDS database is initialized with `database/init.sql`
-
-**Database Errors:**
-- Confirm `moviereviews` database exists in RDS
-- Verify `movieuser` has proper permissions
-- Check RDS parameter group settings
-
-**Deployment Issues:**
-- Ensure RDS endpoint is updated in configuration files
-- Check Kubernetes secrets contain correct credentials
-- Verify network connectivity between services and RDS
-
-### Logs and Debugging
-
-```bash
-# Check backend logs for database connectivity
-kubectl logs -l app=backend -n movie-analyzer
-
-# Check service status
-kubectl get pods -n movie-analyzer
-
-# Test RDS connectivity
-psql -h YOUR_RDS_ENDPOINT -U movieuser -d moviereviews -c "SELECT COUNT(*) FROM reviews;"
 ```
 
 ## 📚 Documentation

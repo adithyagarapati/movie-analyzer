@@ -28,18 +28,17 @@ backend:
 
 ```bash
 # Install with default values (after updating RDS endpoint)
-helm install movie-analyzer ./deploy/helm --namespace movie-analyzer --create-namespace
+helm install movie-analyzer ./deploy/helm
 
 # Install with custom values
 helm install movie-analyzer ./deploy/helm \
-  --namespace movie-analyzer --create-namespace \
   --set backend.env.DB_HOST="your-rds-endpoint.region.rds.amazonaws.com"
 
 # Upgrade
-helm upgrade movie-analyzer ./deploy/helm --namespace movie-analyzer
+helm upgrade movie-analyzer ./deploy/helm
 
 # Uninstall (RDS database remains unaffected)
-helm uninstall movie-analyzer --namespace movie-analyzer
+helm uninstall movie-analyzer
 ```
 
 ## Configuration

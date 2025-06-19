@@ -7,11 +7,8 @@ Complete guide for AWS Lambda integration in the Movie Analyzer application.
 The Movie Analyzer uses **AWS Lambda for serverless sentiment analysis**, replacing the containerized model server with a cloud-native approach.
 
 ### Architecture
-```
-Frontend → Backend → AWS Lambda Function → Response
-             ↓
-        AWS RDS PostgreSQL
-```
+
+<img src="../movie-analyzer-lambda-dark.png" alt="Movie Analyzer Architecture" width="1000"/>
 
 ### Benefits
 ✅ **Serverless**: No container management  
@@ -88,25 +85,6 @@ backend:
       eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT:role/MovieAnalyzerBackendRole"
 ```
 
-## 🎛️ Lambda Function API
-
-### Request Format
-```json
-{
-  "action": "analyze|health|status",
-  "text": "Review text here..."
-}
-```
-
-### Response Format
-```json
-{
-  "statusCode": 200,
-  "headers": { "Content-Type": "application/json" },
-  "body": "{\"sentiment\":\"positive\",\"score\":0.8,\"rating\":4.5}"
-}
-```
-
 ## 🔧 Environment Variables
 
 ### Required
@@ -128,7 +106,7 @@ backend:
     {
       "Effect": "Allow",
       "Action": ["lambda:InvokeFunction"],
-      "Resource": "arn:aws:lambda:ap-south-1:*:function:movie-analyzer-sentiment"
+      "Resource": "*"
     }
   ]
 }
