@@ -54,7 +54,6 @@ Once your RDS instance is created:
 ### 3. Update Application Configuration
 
 #### For Docker Compose
-Create a `.env` file in the project root:
 ```bash
 DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
 DB_PORT=5432
@@ -115,30 +114,3 @@ psql -h YOUR_RDS_ENDPOINT -U movieuser -d moviereviews -c "SELECT COUNT(*) FROM 
 - **Never commit real credentials** to version control
 - Use AWS Secrets Manager or Kubernetes secrets in production
 - Configure proper security groups and VPC settings
-- Consider using RDS Proxy for connection pooling in production
-
-## 📊 Sample Data
-
-The `database/init.sql` script includes:
-- User creation (`movieuser`)
-- Table schema (`reviews`)
-- Sample reviews for testing
-- Performance indexes
-- Statistics view
-
-## 🔍 Troubleshooting
-
-**Connection Issues:**
-- Check RDS security group allows inbound on port 5432
-- Verify RDS is publicly accessible (for demo)
-- Ensure correct endpoint and credentials
-
-**Database Errors:**
-- Verify `moviereviews` database exists
-- Ensure `movieuser` has proper permissions
-- Check if init script ran successfully
-
-**Application Issues:**
-- Backend logs will show database connection status
-- Health check endpoint: `/actuator/health`
-- Check environment variables are set correctly 
